@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  auth0Id          String            @unique // Auth0 sub (e.g. "auth0|abc123")
+  email            String            @unique
+  name             String?
+  orders           Order[]
+  checkoutSessions CheckoutSession[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+enum PaymentProvider {
+  BINANCE
+  STRIPE
+}
+
+enum CheckoutStatus {
+  pending
+  paid
+  expired
+}
+
+model CheckoutSession {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  customerEmail   String
+  asin            String
+  productTitle    String
+  productPrice    Float
+  productImage    String?
+  productWeight   String?
+  paymentProvider PaymentProvider
+  providerRef     String          @unique   // merchantTradeNo (Binance) or session_id (Stripe)
+  checkoutUrl     String?
+  qrContent       String?
+  status          CheckoutStatus  @default(pending)
+  expiresAt       DateTime
+  orderId         String?         @unique
+  order           Order?          @relation(fields: [orderId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status, expiresAt])
+}
+
+enum OrderStatus {
+  created
+  fulfillment_pending
+  fulfillment_failed
+  ordering_from_amazon
+  ordered_on_amazon
+  shipped_to_warehouse
+  received_at_warehouse
+  shipped_to_venezuela
+  in_transit_venezuela
+  delivered
+}
+
+model Order {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  customerEmail   String
+  asin            String
+  productTitle    String
+  productPrice    Float
+  productImage    String?
+  productWeight   String?
+  paymentProvider PaymentProvider
+  paymentRef      String           @unique
+  paidAt          DateTime
+  zincOrderId     String?
+  status          OrderStatus      @default(created)
+  checkoutSession CheckoutSession?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}

@@ -141,9 +141,9 @@ export function ProductCard({
         ) : authLoading ? null : !user ? (
           <a
             href={`/auth/login?returnTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname : "/")}`}
-            className="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 text-center block"
+            className="w-full py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light text-center block"
           >
-            Sign in to checkout
+            Inicia sesion para comprar
           </a>
         ) : estimate ? (
           <>
@@ -153,7 +153,7 @@ export function ProductCard({
             <button
               onClick={() => onPay(estimate.totalCents)}
               disabled={payLoading}
-              className="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 disabled:opacity-50"
+              className="w-full py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light disabled:opacity-50"
             >
               {payLoading ? "Processing..." : `Pay ${formatCents(estimate.totalCents)} with Binance`}
             </button>

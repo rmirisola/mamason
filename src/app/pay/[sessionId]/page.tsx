@@ -86,9 +86,9 @@ export default function PayPage() {
           </p>
           <button
             onClick={() => router.push(`/buy/${checkout.asin}`)}
-            className="px-4 py-2 bg-yellow-500 text-black font-medium rounded-lg hover:bg-yellow-400"
+            className="px-4 py-2 bg-gold text-white font-medium rounded-lg hover:bg-gold-light"
           >
-            Try Again
+            Intentar de Nuevo
           </button>
         </div>
       </div>

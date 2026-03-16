@@ -3,15 +3,15 @@
 import { OrderStatus } from "@prisma/client";
 
 const STEPS: { key: OrderStatus; label: string }[] = [
-  { key: "created", label: "Order Created" },
-  { key: "fulfillment_pending", label: "Processing" },
-  { key: "ordering_from_amazon", label: "Ordering from Amazon" },
-  { key: "ordered_on_amazon", label: "Ordered on Amazon" },
-  { key: "shipped_to_warehouse", label: "Shipped to Warehouse" },
-  { key: "received_at_warehouse", label: "Received at Warehouse" },
-  { key: "shipped_to_venezuela", label: "Shipped to Venezuela" },
-  { key: "in_transit_venezuela", label: "In Transit to Venezuela" },
-  { key: "delivered", label: "Delivered" },
+  { key: "created", label: "Pedido creado" },
+  { key: "fulfillment_pending", label: "Procesando" },
+  { key: "ordering_from_amazon", label: "Comprando en Amazon" },
+  { key: "ordered_on_amazon", label: "Comprado en Amazon" },
+  { key: "shipped_to_warehouse", label: "Enviado al almacen" },
+  { key: "received_at_warehouse", label: "Recibido en almacen" },
+  { key: "shipped_to_venezuela", label: "Enviado a Venezuela" },
+  { key: "in_transit_venezuela", label: "En camino a Venezuela" },
+  { key: "delivered", label: "Entregado" },
 ];
 
 function getStepIndex(status: OrderStatus): number {
@@ -54,7 +54,7 @@ export function OrderStatusDisplay({
       {deliveryDate && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
           <p className="text-sm text-blue-800">
-            Est. delivery to warehouse:{" "}
+            Entrega estimada al almacen:{" "}
             <span className="font-semibold">
               {new Date(deliveryDate).toLocaleDateString(undefined, {
                 weekday: "long",
@@ -100,7 +100,7 @@ export function OrderStatusDisplay({
 
       {trackingNumbers.length > 0 && (
         <div className="border-t pt-4">
-          <p className="text-sm text-gray-500">Tracking:</p>
+          <p className="text-sm text-gray-500">Seguimiento:</p>
           {trackingNumbers.map((tn) => (
             <p key={tn} className="text-sm font-mono text-gray-900">
               {tn}

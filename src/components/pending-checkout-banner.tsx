@@ -56,9 +56,9 @@ export function PendingCheckoutBanner() {
         </div>
         <Link
           href={`/pay/${latest.id}`}
-          className="shrink-0 px-3 py-1.5 bg-yellow-500 text-black text-sm font-medium rounded-lg hover:bg-yellow-400"
+          className="shrink-0 px-3 py-1.5 bg-gold text-white text-sm font-medium rounded-lg hover:bg-gold-light"
         >
-          Resume Payment
+          Continuar Pago
         </Link>
       </div>
       {remaining > 0 && (

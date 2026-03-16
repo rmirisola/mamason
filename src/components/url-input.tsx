@@ -17,22 +17,22 @@ export function UrlInput({
         e.preventDefault();
         if (url.trim() && !loading) onSubmit(url.trim());
       }}
-      className="w-full max-w-xl flex flex-col gap-4"
+      className="w-full max-w-xl flex gap-2"
     >
       <input
         type="text"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
-        placeholder="Paste an Amazon product URL..."
+        placeholder="Pega una URL de Amazon..."
         disabled={loading}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50"
+        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold disabled:opacity-50"
       />
       <button
         type="submit"
         disabled={!url.trim() || loading}
-        className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-6 py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
       >
-        {loading ? "Fetching product..." : "Find Product"}
+        {loading ? "Buscando..." : "Buscar Producto"}
       </button>
     </form>
   );

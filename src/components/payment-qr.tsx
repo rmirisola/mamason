@@ -43,15 +43,15 @@ export function PaymentQR({
             href={checkoutUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3 bg-yellow-500 text-black font-bold rounded-lg hover:bg-yellow-400 text-center block"
+            className="w-full py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light text-center block"
           >
-            Open in Binance
+            Abrir en Binance
           </a>
         </>
       )}
       <div className="flex items-center gap-2 text-sm text-gray-400">
-        <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-yellow-500 rounded-full" />
-        Waiting for payment...
+        <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gold rounded-full" />
+        Esperando pago...
       </div>
     </div>
   );

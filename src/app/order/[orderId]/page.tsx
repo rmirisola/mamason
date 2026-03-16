@@ -50,7 +50,7 @@ export default function OrderPage() {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <h1 className="text-2xl font-bold text-gray-900">Order Status</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Estado del Pedido</h1>
       <OrderStatusDisplay
         productTitle={order.productTitle}
         productImage={order.productImage}

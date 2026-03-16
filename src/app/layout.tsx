@@ -4,8 +4,8 @@ import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mamazon",
-  description: "Buy anything online, delivered to your door in Venezuela",
+  title: "Lopido — Lo pido, te llega",
+  description: "Compra lo que quieras en Amazon y te lo llevamos a tu puerta en Venezuela. Paga con USDC o tarjeta.",
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <Auth0Provider>
         <body className="min-h-screen bg-gray-50">
           <Navbar />

@@ -11,6 +11,7 @@ type OrderData = {
   productImage: string | null;
   status: OrderStatus;
   trackingNumbers: string[];
+  deliveryDate: string | null;
 };
 
 export default function OrderPage() {
@@ -55,6 +56,7 @@ export default function OrderPage() {
         productImage={order.productImage}
         status={order.status}
         trackingNumbers={order.trackingNumbers}
+        deliveryDate={order.deliveryDate}
       />
     </div>
   );

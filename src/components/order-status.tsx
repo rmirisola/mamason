@@ -14,13 +14,13 @@ const STEPS: { key: OrderStatus; label: string }[] = [
   { key: "delivered", label: "Delivered" },
 ];
 
-function getStepInfo(status: OrderStatus): { index: number; failed: boolean } {
+function getStepIndex(status: OrderStatus): number {
   if (status === "fulfillment_failed") {
-    // Show at the "Processing" step with failed indicator
-    return { index: STEPS.findIndex((s) => s.key === "fulfillment_pending"), failed: true };
+    // Internally failed — show as still processing to the customer
+    return STEPS.findIndex((s) => s.key === "fulfillment_pending");
   }
   const index = STEPS.findIndex((s) => s.key === status);
-  return { index: index >= 0 ? index : 0, failed: false };
+  return index >= 0 ? index : 0;
 }
 
 export function OrderStatusDisplay({
@@ -28,13 +28,15 @@ export function OrderStatusDisplay({
   productImage,
   status,
   trackingNumbers,
+  deliveryDate,
 }: {
   productTitle: string;
   productImage?: string | null;
   status: OrderStatus;
   trackingNumbers: string[];
+  deliveryDate?: string | null;
 }) {
-  const { index: currentIndex, failed } = getStepInfo(status);
+  const currentIndex = getStepIndex(status);
 
   return (
     <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 flex flex-col gap-6">
@@ -49,10 +51,17 @@ export function OrderStatusDisplay({
         <h2 className="text-lg font-semibold text-gray-900">{productTitle}</h2>
       </div>
 
-      {failed && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-red-800 text-sm">
-            There was a problem placing your order. Our team is looking into it.
+      {deliveryDate && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+          <p className="text-sm text-blue-800">
+            Est. delivery to warehouse:{" "}
+            <span className="font-semibold">
+              {new Date(deliveryDate).toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              })}
+            </span>
           </p>
         </div>
       )}
@@ -60,28 +69,23 @@ export function OrderStatusDisplay({
       <div className="flex flex-col gap-3">
         {STEPS.map((step, i) => {
           const done = i <= currentIndex;
-          const active = i === currentIndex && !failed;
-          const isFailed = i === currentIndex && failed;
+          const active = i === currentIndex;
           return (
             <div key={step.key} className="flex items-center gap-3">
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                  isFailed
-                    ? "bg-red-500 text-white"
-                    : done
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-200 text-gray-500"
-                } ${active ? "ring-2 ring-green-300" : ""} ${isFailed ? "ring-2 ring-red-300" : ""}`}
+                  done
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 text-gray-500"
+                } ${active ? "ring-2 ring-green-300" : ""}`}
               >
-                {isFailed ? "!" : done ? "\u2713" : i + 1}
+                {done ? "\u2713" : i + 1}
               </div>
               <span
                 className={`text-sm ${
-                  isFailed
-                    ? "text-red-700 font-medium"
-                    : done
-                      ? "text-gray-900 font-medium"
-                      : "text-gray-400"
+                  done
+                    ? "text-gray-900 font-medium"
+                    : "text-gray-400"
                 }`}
               >
                 {step.label}

@@ -32,10 +32,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ returnCode: "SUCCESS", returnMessage: null });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Webhook error:", message);
+    console.error("Webhook error:", error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { returnCode: "FAIL", returnMessage: message },
+      { returnCode: "FAIL", returnMessage: "Internal error" },
       { status: 500 }
     );
   }

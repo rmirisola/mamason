@@ -43,5 +43,8 @@ export type ZincOrder = {
   };
   maxPrice?: number;
   clientNotes?: Record<string, string>;
+  merchantOrderId?: string;
+  trackingUrl?: string;
+  deliveryDate?: string;
 };
 

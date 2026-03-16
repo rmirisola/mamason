@@ -81,8 +81,6 @@ export function verifyWebhookSignature(
   body: string,
   signature: string
 ): boolean {
-  if (process.env.BINANCE_MOCK === "true") return true;
-
   const secretKey = process.env.BINANCE_SECRET_KEY;
   if (!secretKey) return false;
 
@@ -93,5 +91,8 @@ export function verifyWebhookSignature(
     .digest("hex")
     .toUpperCase();
 
-  return expected === signature;
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
 }

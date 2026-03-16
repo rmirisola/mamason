@@ -3,7 +3,7 @@ import { OrderStatus } from "@prisma/client";
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   created: ["fulfillment_pending"],
   fulfillment_pending: ["ordering_from_amazon", "fulfillment_failed"],
-  fulfillment_failed: ["fulfillment_pending"],
+  fulfillment_failed: ["fulfillment_pending", "ordering_from_amazon", "ordered_on_amazon"],
   ordering_from_amazon: ["ordered_on_amazon", "fulfillment_failed"],
   ordered_on_amazon: ["shipped_to_warehouse"],
   shipped_to_warehouse: ["received_at_warehouse"],
@@ -40,6 +40,7 @@ export function mapZincStatus(zincStatus: string): OrderStatus | null {
 /** States where we should still poll Zinc for updates */
 const ACTIVE_FULFILLMENT_STATES: OrderStatus[] = [
   "fulfillment_pending",
+  "fulfillment_failed",
   "ordering_from_amazon",
   "ordered_on_amazon",
   "shipped_to_warehouse",

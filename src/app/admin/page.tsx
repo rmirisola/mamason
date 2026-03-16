@@ -36,6 +36,9 @@ type ZincDetails = {
   };
   maxPrice?: number;
   clientNotes?: Record<string, string>;
+  merchantOrderId?: string;
+  trackingUrl?: string;
+  deliveryDate?: string;
 };
 
 type OwcEstimate = {
@@ -111,19 +114,16 @@ export default function AdminPage() {
     }
 
     setExpandedOrder(orderId);
-
-    if (!zincDetails[orderId]) {
-      setLoadingDetails(orderId);
-      try {
-        const res = await fetch(`/api/admin/orders/${orderId}`);
-        const data = await res.json();
-        setZincDetails((prev) => ({ ...prev, [orderId]: data.zincDetails }));
-        setOwcDetails((prev) => ({ ...prev, [orderId]: data.owcEstimate }));
-      } catch {
-        setZincDetails((prev) => ({ ...prev, [orderId]: null }));
-      } finally {
-        setLoadingDetails(null);
-      }
+    setLoadingDetails(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`);
+      const data = await res.json();
+      setZincDetails((prev) => ({ ...prev, [orderId]: data.zincDetails }));
+      setOwcDetails((prev) => ({ ...prev, [orderId]: data.owcEstimate }));
+    } catch {
+      setZincDetails((prev) => ({ ...prev, [orderId]: null }));
+    } finally {
+      setLoadingDetails(null);
     }
   }
 
@@ -261,10 +261,48 @@ function OrderDetails({
               </a>
             </dd>
           </div>
-          <div className="flex gap-2">
-            <dt className="text-gray-500">Zinc ID:</dt>
-            <dd className="font-mono text-xs">{order.zincOrderId}</dd>
-          </div>
+          {order.zincOrderId && (
+            <div className="flex gap-2">
+              <dt className="text-gray-500">Zinc ID:</dt>
+              <dd>
+                <a
+                  href={`https://dash.zinc.io/orders/${order.zincOrderId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-blue-600 hover:underline"
+                >
+                  {order.zincOrderId}
+                </a>
+              </dd>
+            </div>
+          )}
+          {zinc.merchantOrderId && (
+            <div className="flex gap-2">
+              <dt className="text-gray-500">Amazon Order:</dt>
+              <dd className="font-mono text-xs">{zinc.merchantOrderId}</dd>
+            </div>
+          )}
+          {zinc.deliveryDate && (
+            <div className="flex gap-2">
+              <dt className="text-gray-500">Est. Delivery:</dt>
+              <dd>{new Date(zinc.deliveryDate).toLocaleDateString()}</dd>
+            </div>
+          )}
+          {zinc.trackingUrl && (
+            <div className="flex gap-2">
+              <dt className="text-gray-500">Tracking:</dt>
+              <dd>
+                <a
+                  href={zinc.trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-xs"
+                >
+                  Track package
+                </a>
+              </dd>
+            </div>
+          )}
           {zinc.clientNotes && Object.keys(zinc.clientNotes).length > 0 && (
             <div className="mt-2">
               <dt className="text-gray-500">Client Notes:</dt>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getZincOrder } from "@/lib/zinc";
 import { prisma } from "@/lib/db";
 import { isActiveFulfillmentState, mapZincStatus, canTransition } from "@/lib/order-state";
+import { getCurrentUser } from "@/lib/user";
 import { OrderStatus } from "@prisma/client";
 
 export async function GET(
@@ -9,13 +10,18 @@ export async function GET(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Login required" }, { status: 401 });
+    }
+
     const { orderId } = await params;
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
     });
 
-    if (!order) {
+    if (!order || order.userId !== user.id) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
@@ -40,6 +46,7 @@ export async function GET(
         productImage: order.productImage,
         status: order.status,
         trackingNumbers: zincOrder.trackingNumbers ?? [],
+        deliveryDate: zincOrder.deliveryDate ?? null,
       });
     }
 
@@ -51,6 +58,7 @@ export async function GET(
       productImage: order.productImage,
       status: order.status,
       trackingNumbers: [],
+      deliveryDate: null,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

@@ -31,10 +31,8 @@ export async function createZincOrder(
       shipping_address: WAREHOUSE_ADDRESS,
       max_price: Math.round(maxPrice * 100),
       is_gift: false,
-      shipping: {
-        order_by: "price",
-        max_days: 7,
-      },
+      addax: true,
+      zma_flags: ["bizapi", "bizapi-only"],
       client_notes: {
         mamazon_order_id: mamazonOrderId,
       },
@@ -81,16 +79,34 @@ export async function getZincOrder(orderId: string): Promise<ZincOrder> {
       }
     : undefined;
 
+  // Zinc returns _type: "error" with code "request_processing" while the order
+  // is still being worked on — treat it as pending, not failed.
+  const isRealError =
+    data._type === "error" && data.code !== "request_processing";
+
+  // Zinc's successful response has _type: "order_response" with no status field.
+  // If merchant_order_ids exist, the order is placed on Amazon.
+  const hasBeenPlaced =
+    data._type === "order_response" && data.merchant_order_ids?.length > 0;
+
+  let status: string;
+  if (isRealError) status = "failed";
+  else if (hasBeenPlaced) status = "order_placed";
+  else status = data.status ?? "pending";
+
   return {
     id: data.request_id,
-    status: data._type === "error" ? "failed" : (data.status ?? "pending"),
+    status,
     trackingNumbers: data.tracking ?? [],
     priceComponents,
-    errorCode: data._type === "error" ? data.code : undefined,
-    errorMessage: data._type === "error" ? data.message : undefined,
+    errorCode: isRealError ? data.code : undefined,
+    errorMessage: isRealError ? data.message : undefined,
     shippingAddress: data.request?.shipping_address ?? undefined,
     maxPrice: data.request?.max_price ?? undefined,
     clientNotes: data.request?.client_notes ?? undefined,
+    merchantOrderId: data.merchant_order_ids?.[0]?.merchant_order_id ?? undefined,
+    trackingUrl: data.merchant_order_ids?.[0]?.tracking_url ?? undefined,
+    deliveryDate: data.delivery_dates?.[0]?.date ?? undefined,
   };
 }
 

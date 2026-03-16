@@ -105,6 +105,17 @@ export default function PayPage() {
           qrContent={checkout.qrContent}
           checkoutUrl={checkout.checkoutUrl}
           amount={checkout.productPrice}
+          isMock={checkout.qrContent.startsWith("mock-")}
+          onMockPay={async () => {
+            const res = await fetch(`/api/checkout/${sessionId}/mock-pay`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const data = await res.json();
+              setError(data.error || "Mock payment failed");
+            }
+            // Polling will pick up the status change and redirect
+          }}
         />
       )}
       {timeLeft !== null && (

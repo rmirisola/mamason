@@ -6,7 +6,7 @@ import Link from "next/link";
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   created: { label: "Created", className: "bg-gray-100 text-gray-800" },
   fulfillment_pending: { label: "Processing", className: "bg-blue-100 text-blue-800" },
-  fulfillment_failed: { label: "Failed", className: "bg-red-100 text-red-800" },
+  fulfillment_failed: { label: "Processing", className: "bg-blue-100 text-blue-800" },
   ordering_from_amazon: { label: "Ordering", className: "bg-blue-100 text-blue-800" },
   ordered_on_amazon: { label: "Ordered", className: "bg-blue-100 text-blue-800" },
   shipped_to_warehouse: { label: "Shipped to WH", className: "bg-blue-100 text-blue-800" },

@@ -21,7 +21,7 @@ Customer → Mamazon → Zinc API → Amazon
 | Service | Purpose | Auth | Mock Mode |
 |---------|---------|------|-----------|
 | Rainforest API | Product data (price, weight, categories, images) | API key in query param | `RAINFOREST_MOCK=true` |
-| Zinc API (v1) | Automated Amazon purchasing | Basic auth (base64) | `ZINC_MOCK=true` |
+| Zinc API (bizapi) | Automated Amazon purchasing via ZMA Prime | Basic auth (base64) | `ZINC_MOCK=true` |
 | Binance Pay | USDT payments | HMAC-SHA512 signed requests | `BINANCE_MOCK=true` |
 | One Way Cargo | FL → Venezuela shipping | N/A (rate calculation only) | N/A |
 | Auth0 | User authentication | OAuth2/OIDC via SDK | Required |
@@ -35,24 +35,64 @@ User
 ├── auth0Id (unique)
 ├── email (unique)
 ├── name
-└── orders[] → Order
+├── orders[] → Order
+└── checkoutSessions[] → CheckoutSession
 
-Order
+CheckoutSession
 ├── id (cuid)
+├── userId → User
 ├── customerEmail
 ├── asin
 ├── productTitle
-├── productPrice (what we charge the customer)
+├── productPrice
 ├── productImage
 ├── productWeight
-├── merchantTradeNo (unique, Binance Pay reference)
-├── paymentStatus: "pending" | "paid" | "failed"
-├── zincOrderId (Zinc's request_id)
-├── zincStatus: null | "pending" | "in_progress" | "order_placed" | "shipped" | "delivered" | "failed"
+├── paymentProvider: BINANCE | STRIPE
+├── providerRef (unique)    # merchantTradeNo (Binance)
+├── checkoutUrl
+├── qrContent
+├── status: pending | paid | expired
+├── expiresAt               # 30-minute TTL
+├── orderId → Order (unique, set on payment confirmation)
+├── createdAt
+└── updatedAt
+
+Order
+├── id (cuid)
 ├── userId → User
+├── customerEmail
+├── asin
+├── productTitle
+├── productPrice
+├── productImage
+├── productWeight
+├── paymentProvider: BINANCE | STRIPE
+├── paymentRef (unique)     # copied from CheckoutSession.providerRef
+├── paidAt
+├── zincOrderId
+├── status: OrderStatus enum (see state machine)
+├── checkoutSession → CheckoutSession
 ├── createdAt
 └── updatedAt
 ```
+
+## Checkout Flow
+
+The checkout is a two-model pipeline: `CheckoutSession` → `Order`.
+
+1. User views product on `/buy/[asin]` — price estimate fetched automatically
+2. User clicks "Pay $X with Binance" — `POST /api/checkout/create` creates a `CheckoutSession` (pending, 30min TTL)
+3. User sees QR code on `/pay/[sessionId]` — polls for payment status
+4. Payment confirmed (webhook or mock) → `handlePaymentConfirmed()` atomically creates an `Order` and marks session `paid`
+5. Zinc order placed automatically after payment — if it fails, order stays at `created` for admin retry
+
+### Checkout Recovery
+
+If the user navigates away from `/pay/[sessionId]`:
+- A `<PendingCheckoutBanner />` on the home page and buy page shows the most recent pending session with a "Resume Payment" link
+- The `/orders` page shows a "Pending Payments" section above the orders list
+- `POST /api/checkout/create` deduplicates: if a pending+unexpired session exists for the same ASIN, it returns the existing session ID
+- Users can cancel a session from the pay page via `POST /api/checkout/[sessionId]/cancel`
 
 ## Order Lifecycle
 
@@ -61,117 +101,95 @@ Order
 ```
                     ┌─────────────┐
                     │   CREATED   │
-                    │ payment:    │
-                    │  pending    │
-                    │ zinc: null  │
+                    │ (payment    │
+                    │  confirmed) │
                     └──────┬──────┘
                            │
-                    payment webhook
+                     Zinc order placed
                            │
               ┌────────────┴────────────┐
               │                         │
               ▼                         ▼
-     ┌────────────────┐       ┌─────────────────┐
-     │  PAYMENT FAIL  │       │  PAID           │
-     │  (never set —  │       │  payment: paid  │
-     │   see issues)  │       │  zinc: null     │
-     └────────────────┘       └────────┬────────┘
+     ┌────────────────────┐    ┌─────────────────┐
+     │ FULFILLMENT_FAILED │    │ FULFILLMENT_     │
+     │ (Zinc create fail) │    │ PENDING          │
+     └────────┬───────────┘    │ (zincOrderId ✓)  │
+              │                └────────┬─────────┘
+         admin retry                    │
+              │                    Zinc polling
+              └──→ (back to             │
+                   Zinc create)         ▼
+                              ┌─────────────────┐
+                              │ ORDERING_FROM_   │
+                              │ AMAZON           │
+                              └────────┬─────────┘
                                        │
-                                 create zinc order
+                                       ▼
+                              ┌─────────────────┐
+                              │ ORDERED_ON_      │
+                              │ AMAZON           │
+                              └────────┬─────────┘
                                        │
-                          ┌────────────┴────────────┐
-                          │                         │
-                          ▼                         ▼
-                 ┌─────────────────┐      ┌─────────────────┐
-                 │  ZINC CREATED   │      │  ZINC FAILED    │
-                 │  zinc: pending  │      │  zinc: failed   │
-                 │  zincOrderId ✓  │      │  zincOrderId ✗  │
-                 └────────┬────────┘      └────────┬────────┘
-                          │                        │
-                     zinc polling              admin retry
-                          │                        │
-                          ▼                        └──→ (back to create zinc)
-                 ┌─────────────────┐
-                 │  PROCESSING     │
-                 │  zinc:          │
-                 │   in_progress   │
-                 └────────┬────────┘
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │  ORDERED        │
-                 │  zinc:          │
-                 │   order_placed  │
-                 └────────┬────────┘
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │  SHIPPED        │
-                 │  zinc: shipped  │
-                 │  tracking ✓     │
-                 └────────┬────────┘
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │  AT WAREHOUSE   │
-                 │  zinc: delivered│
-                 └────────┬────────┘
-                          │
-                     (future: OWC handoff)
-                          │
-                          ▼
-                 ┌─────────────────┐
-                 │  DELIVERED      │
-                 │  (not yet       │
-                 │   implemented)  │
-                 └─────────────────┘
+                                       ▼
+                              ┌─────────────────┐
+                              │ SHIPPED_TO_      │
+                              │ WAREHOUSE        │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ RECEIVED_AT_     │
+                              │ WAREHOUSE        │
+                              └────────┬─────────┘
+                                       │
+                                  OWC handoff
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ SHIPPED_TO_      │
+                              │ VENEZUELA        │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ IN_TRANSIT_      │
+                              │ VENEZUELA        │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │   DELIVERED      │
+                              └─────────────────┘
 ```
 
 ### State Transitions
 
 | From | Event | To | Handler |
 |------|-------|----|---------|
-| — | User clicks Pay | `payment:pending, zinc:null` | `POST /api/payment/create` |
-| `payment:pending` | Binance webhook confirms | `payment:paid` | `POST /api/payment/webhook` |
-| `payment:paid, zinc:null` | Zinc order created | `zinc:pending` | `POST /api/payment/webhook` (same request) |
-| `payment:paid, zinc:null` | Zinc creation fails | `zinc:failed` | `POST /api/payment/webhook` (catch block) |
-| `zinc:failed` | Admin retries | `zinc:pending` | `POST /api/admin/orders/retry` |
-| `zinc:pending` | Zinc polling | `zinc:in_progress` | `GET /api/order/[orderId]` |
-| `zinc:in_progress` | Zinc polling | `zinc:order_placed` | `GET /api/order/[orderId]` |
-| `zinc:order_placed` | Zinc polling | `zinc:shipped` | `GET /api/order/[orderId]` |
-| `zinc:shipped` | Zinc polling | `zinc:delivered` | `GET /api/order/[orderId]` |
+| — | Payment confirmed | `created` | `handlePaymentConfirmed()` in `lib/payment.ts` |
+| `created` | Zinc order placed | `fulfillment_pending` | `handlePaymentConfirmed()` |
+| `created` | Zinc creation fails | `fulfillment_failed` | `handlePaymentConfirmed()` |
+| `fulfillment_failed` | Admin retry | `fulfillment_pending` | `POST /api/admin/orders/retry` |
+| `fulfillment_pending` | Zinc polling | `ordering_from_amazon` | `GET /api/order/[orderId]` |
+| `ordering_from_amazon` | Zinc polling | `ordered_on_amazon` | `GET /api/order/[orderId]` |
+| `ordered_on_amazon` | Zinc polling | `shipped_to_warehouse` | `GET /api/order/[orderId]` |
+| `shipped_to_warehouse` | Zinc polling | `received_at_warehouse` | `GET /api/order/[orderId]` |
+| `received_at_warehouse` | Admin | `shipped_to_venezuela` | `POST /api/admin/orders/status` |
+| `shipped_to_venezuela` | Admin | `in_transit_venezuela` | `POST /api/admin/orders/status` |
+| `in_transit_venezuela` | Admin | `delivered` | `POST /api/admin/orders/status` |
 
-## Known Issues
+### Zinc Status Updates
 
-### High Severity
+**Current (Alpha):** Status is updated by polling Zinc on every order view (`GET /api/order/[orderId]` and `GET /api/admin/orders/[orderId]`). This works for low volume but won't scale — every page load hits the Zinc API.
 
-**1. Webhook idempotency race condition**
-If Binance sends the webhook twice concurrently, the second call sees `paymentStatus: "paid"` and returns early. If the first call's Zinc order creation fails, the order is stuck with `paid` + `zinc:failed` + no automatic recovery. Fix: use a DB transaction with row locking or an idempotency key.
+**Future (Beta):** Replace polling with Zinc webhooks. Zinc can POST status updates to a callback URL, which would update the order in our DB immediately. Polling can then be removed or kept as a fallback for missed webhooks.
 
-**2. Paid order with no Zinc order is invisible to user**
-When Zinc creation fails after payment, the order shows `payment:paid` + `zinc:failed` with no `zincOrderId`. The order status UI doesn't handle this — it shows a broken/empty progress bar. User has no way to know what happened or take action. Fix: show error state in UI, auto-retry Zinc, or notify admin.
+### Payment Idempotency
 
-**3. Order status UI doesn't handle "failed" state**
-`OrderStatusDisplay` has a fixed list of steps that doesn't include "failed". When `zincStatus` is `"failed"` or `null`, `findIndex` returns -1, showing nothing. Fix: add error state rendering.
-
-### Medium Severity
-
-**4. `paymentStatus: "failed"` is defined but never written**
-No code path sets `paymentStatus` to `"failed"`. Abandoned payments stay `"pending"` forever. Fix: add a payment timeout (e.g. 30 min) via cron or webhook.
-
-**5. No payment expiry**
-The `/pay` page polls every 3 seconds indefinitely. No timeout, no backoff. If a user abandons the payment page, the order sits as `pending` forever. Fix: expire payments after a timeout and show "payment expired" state.
-
-**6. Zinc status updates not persisted**
-The `GET /api/order/[orderId]` route polls the Zinc API for current status but never writes the result back to the DB. The DB `zincStatus` only gets set during order creation or admin retry. This means admin dashboard shows stale data unless the user's order page happens to be polling. Fix: write Zinc status updates back to DB on each poll.
-
-### Low Severity
-
-**7. Polling has no backoff**
-Both the pay page (3s) and order page (30s) poll at fixed intervals. No exponential backoff, no circuit breaker. Could cause load issues at scale.
-
-**8. Mock mode security**
-In mock mode, any request to `/api/payment/webhook?mock=true&merchantTradeNo=X` triggers payment confirmation. Fine for dev, but `BINANCE_MOCK` must never be `true` in production.
+`handlePaymentConfirmed()` has three layers:
+1. If session is already `paid` with an `orderId`, return it
+2. Order creation + session update in a `$transaction`
+3. If `paymentRef` unique constraint violation, look up existing order
 
 ## Pricing Model
 
@@ -203,12 +221,9 @@ shipping_usd = (final_weight × rate + handling) / bcv_rate
 
 Currently defaults to central region rates. BCV rate fetched from pydolarve.org (cached 1 hour).
 
-### Price Estimation vs Actual Cost
+### Price Estimation
 
-Estimates are shown pre-checkout but actual Zinc costs can differ:
-- **Amazon shipping**: unpredictable without Prime. With Prime = $0.
-- **Tax**: estimated at 7%, actual may vary slightly.
-- **OWC shipping**: based on product dimensions (not package), padded with 0.5"/side + 1.5x volume factor.
+The full price breakdown (product + tax + Amazon shipping + OWC shipping + service fee) is fetched via `GET /api/product/estimate` and displayed inline on the product card before the user clicks "Pay".
 
 The `max_price` sent to Zinc is set at `productPrice × 1.1` (10% buffer). If Amazon's actual total exceeds this, the order fails with `max_price_exceeded`.
 
@@ -247,12 +262,11 @@ Auth0 (Regular Web App) with `@auth0/nextjs-auth0` v4.
 
 | Route | Auth | Description |
 |-------|------|-------------|
-| `/` | Public | Home — paste Amazon URL |
-| `/buy/[asin]` | Public (login for checkout) | Shareable product page |
-| `/product` | Public (legacy) | Product page via sessionStorage |
-| `/pay` | Logged in | Binance Pay QR + polling |
+| `/` | Public | Home — paste Amazon URL, pending checkout banner |
+| `/buy/[asin]` | Public (login for checkout) | Product page with inline price breakdown |
+| `/pay/[sessionId]` | Logged in | Binance Pay QR + polling + cancel button |
 | `/order/[orderId]` | Public | Order tracking |
-| `/orders` | Logged in | User's order history |
+| `/orders` | Logged in | Pending payments + order history |
 | `/admin` | Admin | Order management dashboard |
 
 ### API Routes
@@ -262,13 +276,18 @@ Auth0 (Regular Web App) with `@auth0/nextjs-auth0` v4.
 | `/api/product` | GET | Public | Fetch product data from Rainforest |
 | `/api/product/estimate` | GET | Public | Price estimate (Zinc + OWC + tax) |
 | `/api/shipping/estimate` | GET | Public | OWC shipping estimate only |
-| `/api/payment/create` | POST | Logged in | Create order + Binance Pay session |
-| `/api/payment/webhook` | POST/GET | Binance/Mock | Payment confirmation |
+| `/api/checkout/create` | POST | Logged in | Create checkout session (deduplicates by ASIN) |
+| `/api/checkout/pending` | GET | Logged in | List user's pending unexpired sessions |
+| `/api/checkout/[sessionId]` | GET | Public | Checkout session status |
+| `/api/checkout/[sessionId]/cancel` | POST | Logged in | Cancel a pending session |
+| `/api/checkout/[sessionId]/mock-pay` | POST | Dev | Simulate payment confirmation |
+| `/api/payment/webhook` | POST | Binance | Payment confirmation webhook |
 | `/api/order/[orderId]` | GET | Public | Order status (polls Zinc) |
 | `/api/dev/order` | POST | Logged in | Skip payment (dev only) |
 | `/api/admin/orders` | GET | Admin | List all orders |
 | `/api/admin/orders/[orderId]` | GET | Admin | Order details + Zinc + OWC |
 | `/api/admin/orders/retry` | POST | Admin | Retry failed Zinc order |
+| `/api/admin/orders/status` | POST | Admin | Update order status |
 
 ## Directory Structure
 
@@ -276,12 +295,11 @@ Auth0 (Regular Web App) with `@auth0/nextjs-auth0` v4.
 src/
 ├── app/
 │   ├── layout.tsx              # Root layout with Auth0Provider + Navbar
-│   ├── page.tsx                # Home page
-│   ├── buy/[asin]/page.tsx     # Shareable product page
-│   ├── product/page.tsx        # Legacy product page
-│   ├── pay/page.tsx            # Payment QR page
+│   ├── page.tsx                # Home page + pending checkout banner
+│   ├── buy/[asin]/page.tsx     # Product page with inline price breakdown
+│   ├── pay/[sessionId]/page.tsx # Payment QR + cancel button
 │   ├── order/[orderId]/page.tsx # Order tracking
-│   ├── orders/page.tsx         # User order history
+│   ├── orders/page.tsx         # Pending payments + order history
 │   ├── admin/page.tsx          # Admin dashboard
 │   └── api/
 │       ├── product/
@@ -289,9 +307,15 @@ src/
 │       │   └── estimate/route.ts # Price estimate
 │       ├── shipping/
 │       │   └── estimate/route.ts # OWC shipping estimate
+│       ├── checkout/
+│       │   ├── create/route.ts # Create session (with dedup)
+│       │   ├── pending/route.ts # List pending sessions
+│       │   └── [sessionId]/
+│       │       ├── route.ts    # Session status
+│       │       ├── cancel/route.ts # Cancel session
+│       │       └── mock-pay/route.ts # Dev: simulate payment
 │       ├── payment/
-│       │   ├── create/route.ts # Create order + payment
-│       │   └── webhook/route.ts # Payment confirmation
+│       │   └── webhook/route.ts # Binance webhook
 │       ├── order/
 │       │   └── [orderId]/route.ts # Order status
 │       ├── dev/
@@ -300,12 +324,13 @@ src/
 │           └── orders/
 │               ├── route.ts    # List orders
 │               ├── [orderId]/route.ts # Order details
-│               └── retry/route.ts # Retry failed order
+│               ├── retry/route.ts # Retry failed order
+│               └── status/route.ts # Update order status
 ├── components/
 │   ├── navbar.tsx              # Nav with auth state
 │   ├── url-input.tsx           # Amazon URL input
-│   ├── product-card.tsx        # Product display + shipping estimate
-│   ├── price-breakdown.tsx     # Full price breakdown pre-payment
+│   ├── product-card.tsx        # Product display + price breakdown + pay button
+│   ├── pending-checkout-banner.tsx # Pending session recovery banner
 │   ├── payment-qr.tsx          # Binance Pay QR code
 │   └── order-status.tsx        # Order progress steps
 ├── lib/
@@ -317,6 +342,8 @@ src/
 │   ├── rainforest.ts           # Rainforest API + restriction check
 │   ├── zinc.ts                 # Zinc API (create, get, estimate)
 │   ├── binance.ts              # Binance Pay API + webhook verification
+│   ├── payment.ts              # handlePaymentConfirmed() — session → order
+│   ├── order-state.ts          # Order state machine + Zinc status mapping
 │   ├── owc-shipping.ts         # OWC shipping cost calculation
 │   ├── restricted-products.ts  # Product restriction rules
 │   ├── warehouse.ts            # Weston, FL warehouse address
@@ -325,6 +352,49 @@ src/
 │   └── amazon-categories.json  # Amazon category tree (12k nodes)
 └── middleware.ts                # Auth0 middleware
 ```
+
+## Deployment
+
+### Infrastructure (GCP)
+
+| Resource | Service | Details |
+|----------|---------|---------|
+| App | Cloud Run | Service `lopido`, `us-central1`, port 8080 |
+| Database | Cloud SQL | PostgreSQL 15, instance `lopido-db`, `us-central1` |
+| Images | Artifact Registry | `us-central1-docker.pkg.dev/lopido-prod/lopido/app` |
+| Secrets | Secret Manager | All API keys and credentials |
+| GCP Project | `lopido-prod` | |
+
+### Docker
+
+Multi-stage Dockerfile with 4 targets:
+
+- **deps** — `npm ci` (cached layer)
+- **builder** — Prisma generate + Next.js build
+- **migrator** — Prisma CLI + migration files (for CI)
+- **runner** — Standalone Next.js server, non-root user (`nextjs`)
+
+### CI/CD (GitHub Actions)
+
+`.github/workflows/deploy.yml` runs on every push to `main`:
+
+1. Authenticate to GCP via Workload Identity Federation (keyless)
+2. Build & push Docker image to Artifact Registry
+3. Run Prisma migrations via Cloud SQL Proxy on the runner
+4. Deploy new revision to Cloud Run
+
+**GitHub Secrets:**
+- `WIF_PROVIDER` / `WIF_SERVICE_ACCOUNT` — GCP auth
+- `DB_USER` / `DB_PASSWORD` / `DB_NAME` — migration connection
+
+### Zinc Bizapi
+
+Orders are placed via Zinc's ZMA bizapi flow (undocumented, obtained via support). Key differences from standard ZMA:
+
+- `addax: true` + `zma_flags: ["bizapi", "bizapi-only"]` in request body
+- No `retailer_credentials`, `payment_method`, or `billing_address`
+- Free Prime shipping, no queue, no rate limits
+- Returns/cancellations via case system (not fully automated)
 
 ## Environment Variables
 
@@ -352,3 +422,9 @@ ZINC_MOCK=true
 BINANCE_MOCK=true
 RAINFOREST_MOCK=true
 ```
+
+### Production (Cloud Run)
+
+Secrets are stored in GCP Secret Manager and mounted as env vars. Non-sensitive config (`APP_BASE_URL`, `ADMIN_EMAILS`, mock flags) are set as plain env vars.
+
+Production DATABASE_URL uses Cloud SQL socket: `postgresql://user:pass@localhost/lopido?host=/cloudsql/lopido-prod:us-central1:lopido-db`

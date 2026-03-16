@@ -45,16 +45,35 @@ export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState("");
 
   async function handleSubmit(url: string) {
     setLoading(true);
     setError(null);
 
+    // Try to extract ASIN locally first
     const match = url.match(
       /(?:\/dp\/|\/gp\/product\/|\/product\/|[?&]asin=)([A-Z0-9]{10})/i
     );
     if (match) {
       router.push(`/buy/${match[1]}`);
+      return;
+    }
+
+    // For shortened URLs (a.co, amzn.to), resolve via API
+    if (/^https?:\/\/(a\.co|amzn\.to|amzn\.com)\//i.test(url)) {
+      try {
+        const res = await fetch(`/api/product?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        if (res.ok && data.asin) {
+          router.push(`/buy/${data.asin}`);
+          return;
+        }
+        setError(data.error || "No se pudo resolver el link");
+      } catch {
+        setError("Algo salio mal");
+      }
+      setLoading(false);
       return;
     }
 
@@ -79,12 +98,35 @@ export default function Home() {
 
       {/* URL Input + trust signal */}
       <div className="w-full max-w-xl flex flex-col gap-2">
-        <UrlInput onSubmit={handleSubmit} loading={loading} />
+        <UrlInput onSubmit={handleSubmit} loading={loading} onValueChange={setInputValue} />
         {loading && <p className="text-gray-500 text-center text-sm">Buscando producto...</p>}
         {error && <p className="text-red-500 text-center text-sm">{error}</p>}
         <p className="text-xs text-gray-400 text-center">
           Pago seguro con Stripe &middot; Sin casillero &middot; Precio total por adelantado
         </p>
+        {inputValue && !inputValue.startsWith("http") ? (
+          <p className="text-xs text-center">
+            <a
+              href={`https://www.amazon.com/s?k=${encodeURIComponent(inputValue)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-navy/60 hover:text-navy underline"
+            >
+              Buscar &ldquo;{inputValue.length > 30 ? inputValue.slice(0, 30) + "..." : inputValue}&rdquo; en Amazon
+            </a>
+          </p>
+        ) : (
+          <p className="text-xs text-center">
+            <a
+              href="https://www.amazon.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-navy/60 hover:text-navy underline"
+            >
+              Buscar en Amazon
+            </a>
+          </p>
+        )}
       </div>
 
       {/* How it works */}

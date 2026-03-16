@@ -8,10 +8,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "url parameter required" }, { status: 400 });
   }
 
-  const asin = extractAsin(url);
+  let resolvedUrl = url;
+
+  // Follow redirects for shortened URLs (a.co, amzn.to, etc.)
+  if (/^https?:\/\/(a\.co|amzn\.to|amzn\.com)\//i.test(url)) {
+    try {
+      const res = await fetch(url, { redirect: "follow" });
+      resolvedUrl = res.url;
+    } catch {
+      return NextResponse.json({ error: "No se pudo resolver el link" }, { status: 400 });
+    }
+  }
+
+  const asin = extractAsin(resolvedUrl);
   if (!asin) {
     return NextResponse.json(
-      { error: "Could not extract ASIN from URL" },
+      { error: "No se pudo extraer el producto de esa URL" },
       { status: 400 }
     );
   }

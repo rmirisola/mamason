@@ -110,12 +110,22 @@ export default function BuyPage() {
     }
   }
 
-  function handleNewUrl(url: string) {
+  async function handleNewUrl(url: string) {
     const match = url.match(
       /(?:\/dp\/|\/gp\/product\/|\/product\/|[?&]asin=)([A-Z0-9]{10})/i
     );
     if (match) {
       router.push(`/buy/${match[1]}`);
+      return;
+    }
+    if (/^https?:\/\/(a\.co|amzn\.to|amzn\.com)\//i.test(url)) {
+      try {
+        const res = await fetch(`/api/product?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        if (res.ok && data.asin) {
+          router.push(`/buy/${data.asin}`);
+        }
+      } catch { /* ignore */ }
     }
   }
 

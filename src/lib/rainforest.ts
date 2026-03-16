@@ -1,8 +1,8 @@
 import { Product } from "./types";
-import {
-  checkProductRestrictions,
-  RestrictionResult,
-} from "./restricted-products";
+
+type RestrictionResult =
+  | { status: "allowed" }
+  | { status: "blocked"; reason: string };
 
 export type ProductWithRestriction = Product & {
   restriction: RestrictionResult;
@@ -42,14 +42,17 @@ export async function getProduct(asin: string): Promise<ProductWithRestriction> 
   const data = await res.json();
   const p = data.product;
 
-  const restriction = checkProductRestrictions({
-    title: p.title ?? "",
-    categories: p.categories ?? [],
-    feature_bullets: p.feature_bullets ?? [],
-    specifications: p.specifications ?? [],
-  });
-
+  const hasBuybox = !!p.buybox_winner;
   const isPrime = p.buybox_winner?.is_prime === true;
+
+  let restriction: RestrictionResult;
+  if (!hasBuybox) {
+    restriction = { status: "blocked", reason: "Este producto no esta disponible para compra directa en Amazon en este momento." };
+  } else if (!isPrime) {
+    restriction = { status: "blocked", reason: "Este producto no tiene envio Prime y no puede ser procesado en este momento." };
+  } else {
+    restriction = { status: "allowed" };
+  }
 
   return {
     asin,

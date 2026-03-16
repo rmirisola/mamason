@@ -7,7 +7,7 @@ export type Product = {
   weight: string | null;
   dimensions: string | null;
   restriction?: {
-    status: "allowed" | "blocked" | "flagged";
+    status: "allowed" | "blocked";
     reason?: string;
   };
   isPrime?: boolean;

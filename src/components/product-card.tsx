@@ -81,7 +81,7 @@ export function ProductCard({
         </h2>
         <div className="flex items-baseline gap-2">
           <span className="text-3xl font-bold text-gray-900">
-            ${product.price.toFixed(2)}
+            {blocked ? "N/D" : product.price > 0 ? `$${product.price.toFixed(2)}` : "N/D"}
           </span>
           <span className="text-sm text-gray-500">en Amazon</span>
         </div>

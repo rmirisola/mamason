@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/user";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Login required" }, { status: 401 });
+    }
+
     const { sessionId } = await params;
 
     const session = await prisma.checkoutSession.findUnique({
       where: { id: sessionId },
     });
 
-    if (!session) {
+    if (!session || session.userId !== user.id) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
@@ -50,7 +56,7 @@ export async function GET(
       orderId: session.orderId,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Checkout session error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

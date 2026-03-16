@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createZincOrder } from "@/lib/zinc";
 import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/user";
 
 export async function POST(request: NextRequest) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available" }, { status: 403 });
-  }
-
   try {
+    if (!(await requireAdmin())) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Login required" }, { status: 401 });
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Route error:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

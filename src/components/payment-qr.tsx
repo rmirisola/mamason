@@ -7,28 +7,30 @@ export function PaymentQR({
   checkoutUrl,
   amount,
   isMock,
+  isAdmin,
   onMockPay,
 }: {
   qrContent: string;
   checkoutUrl: string;
   amount: number;
   isMock?: boolean;
+  isAdmin?: boolean;
   onMockPay?: () => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-6 p-8 bg-white rounded-lg shadow-lg max-w-sm">
-      <h2 className="text-xl font-bold text-gray-900">Pay with Binance</h2>
+      <h2 className="text-xl font-bold text-gray-900">Pagar</h2>
       <p className="text-3xl font-bold text-gray-900">
-        ${amount.toFixed(2)} <span className="text-sm text-gray-500">USDT</span>
+        ${amount.toFixed(2)} <span className="text-sm text-gray-500">USD</span>
       </p>
-      {isMock ? (
+      {isMock && isAdmin ? (
         <div className="w-full flex flex-col items-center gap-3 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-          <p className="text-xs text-gray-400 uppercase font-medium">Dev Mode</p>
+          <p className="text-xs text-gray-400 uppercase font-medium">Admin — Dev Mode</p>
           <button
             onClick={onMockPay}
             className="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300"
           >
-            Simulate Payment
+            Simular Pago
           </button>
         </div>
       ) : (
@@ -37,7 +39,7 @@ export function PaymentQR({
             <QRCodeSVG value={qrContent} size={200} />
           </div>
           <p className="text-sm text-gray-500 text-center">
-            Scan with Binance app or click below
+            Escanea el codigo o haz clic abajo
           </p>
           <a
             href={checkoutUrl}
@@ -45,7 +47,7 @@ export function PaymentQR({
             rel="noopener noreferrer"
             className="w-full py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light text-center block"
           >
-            Abrir en Binance
+            Pagar
           </a>
         </>
       )}

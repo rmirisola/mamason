@@ -14,6 +14,13 @@ export default function BuyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/orders").then((res) => {
+      if (res.ok) setIsAdmin(true);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -141,7 +148,7 @@ export default function BuyPage() {
           <ProductCard
             product={product}
             onPay={handlePay}
-            onSkipPayment={handleSkipPayment}
+            onSkipPayment={isAdmin ? handleSkipPayment : undefined}
             payLoading={actionLoading}
             blocked={product.restriction?.status === "blocked"}
             blockedReason={product.restriction?.reason}

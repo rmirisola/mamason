@@ -115,7 +115,7 @@ export function ProductCard({
             </div>
             <div className="flex justify-between border-t pt-2 font-bold text-base">
               <span>Total</span>
-              <span>{formatCents(estimate.totalCents)} USDT</span>
+              <span>{formatCents(estimate.totalCents)} USD</span>
             </div>
           </div>
         )}
@@ -147,15 +147,11 @@ export function ProductCard({
           </a>
         ) : estimate ? (
           <>
-            <p className="text-sm text-gray-500">
-              Ordering as {user.email}
-            </p>
             <button
-              onClick={() => onPay(estimate.totalCents)}
-              disabled={payLoading}
-              className="w-full py-3 bg-gold text-white font-bold rounded-lg hover:bg-gold-light disabled:opacity-50"
+              disabled
+              className="w-full py-3 bg-gray-300 text-gray-500 font-bold rounded-lg cursor-not-allowed"
             >
-              {payLoading ? "Processing..." : `Pay ${formatCents(estimate.totalCents)} with Binance`}
+              Proximamente
             </button>
             {onSkipPayment && (
               <button

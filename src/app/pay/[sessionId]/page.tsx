@@ -24,6 +24,13 @@ export default function PayPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/orders").then((res) => {
+      if (res.ok) setIsAdmin(true);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function fetchCheckout() {
@@ -80,9 +87,9 @@ export default function PayPage() {
     return (
       <div className="flex flex-col items-center gap-4">
         <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 text-center">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Session Expired</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Sesion Expirada</h2>
           <p className="text-gray-500 mb-4">
-            This checkout session has expired. Please try again.
+            Esta sesion de pago ha expirado. Intenta de nuevo.
           </p>
           <button
             onClick={() => router.push(`/buy/${checkout.asin}`)}
@@ -106,6 +113,7 @@ export default function PayPage() {
           checkoutUrl={checkout.checkoutUrl}
           amount={checkout.productPrice}
           isMock={checkout.qrContent.startsWith("mock-")}
+          isAdmin={isAdmin}
           onMockPay={async () => {
             const res = await fetch(`/api/checkout/${sessionId}/mock-pay`, {
               method: "POST",
@@ -145,7 +153,7 @@ export default function PayPage() {
         disabled={cancelling}
         className="text-sm text-gray-400 hover:text-gray-600 underline"
       >
-        {cancelling ? "Cancelling..." : "Cancel payment"}
+        {cancelling ? "Cancelando..." : "Cancelar pago"}
       </button>
     </div>
   );

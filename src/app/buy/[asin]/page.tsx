@@ -31,13 +31,13 @@ export default function BuyPage() {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.error || "Failed to fetch product");
+          setError(data.error || "No se pudo cargar el producto");
           return;
         }
 
         setProduct(data);
       } catch {
-        setError("Something went wrong");
+        setError("Algo salio mal");
       } finally {
         setLoading(false);
       }
@@ -66,13 +66,13 @@ export default function BuyPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create checkout");
+        setError(data.error || "No se pudo crear la sesion de pago");
         return;
       }
 
       router.push(`/pay/${data.sessionId}`);
     } catch {
-      setError("Something went wrong");
+      setError("Algo salio mal");
     } finally {
       setActionLoading(false);
     }
@@ -98,13 +98,13 @@ export default function BuyPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to place order");
+        setError(data.error || "No se pudo realizar el pedido");
         return;
       }
 
       router.push(`/order/${data.orderId}`);
     } catch {
-      setError("Something went wrong");
+      setError("Algo salio mal");
     } finally {
       setActionLoading(false);
     }
@@ -138,10 +138,10 @@ export default function BuyPage() {
         <>
           {product.restriction?.status === "flagged" && (
             <div className="w-full max-w-md bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-yellow-800 font-semibold">Special import requirements</p>
+              <p className="text-yellow-800 font-semibold">Requisitos especiales de importacion</p>
               <p className="text-yellow-600 text-sm mt-1">{product.restriction.reason}</p>
               <p className="text-gray-500 text-xs mt-2">
-                This item may require additional processing. Delivery times could be longer.
+                Este producto puede requerir procesamiento adicional. Los tiempos de entrega podrian ser mas largos.
               </p>
             </div>
           )}

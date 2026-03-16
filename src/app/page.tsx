@@ -76,10 +76,10 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-10 w-full max-w-3xl">
+    <div className="flex flex-col items-center gap-8 w-full max-w-3xl">
       {/* Hero */}
       <div className="text-center pt-6">
-        <h1 className="text-5xl font-bold text-navy mb-3 tracking-tight">
+        <h1 className="text-4xl sm:text-5xl font-bold text-navy mb-3 tracking-tight">
           Lo pido, te llega
         </h1>
         <p className="text-lg text-gray-500 max-w-md mx-auto leading-relaxed">

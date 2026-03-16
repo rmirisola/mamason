@@ -25,12 +25,12 @@ export default function OrderPage() {
         const res = await fetch(`/api/order/${orderId}`);
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Failed to fetch order");
+          setError(data.error || "No se pudo cargar el pedido");
           return;
         }
         setOrder(data);
       } catch {
-        setError("Something went wrong");
+        setError("Algo salio mal");
       }
     }
 
@@ -45,7 +45,7 @@ export default function OrderPage() {
   }
 
   if (!order) {
-    return <p className="text-gray-500">Loading order...</p>;
+    return <p className="text-gray-500">Cargando pedido...</p>;
   }
 
   return (

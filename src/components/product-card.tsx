@@ -83,34 +83,34 @@ export function ProductCard({
           <span className="text-3xl font-bold text-gray-900">
             ${product.price.toFixed(2)}
           </span>
-          <span className="text-sm text-gray-500">on Amazon</span>
+          <span className="text-sm text-gray-500">en Amazon</span>
         </div>
         {product.weight && (
-          <p className="text-sm text-gray-500">Weight: {product.weight}</p>
+          <p className="text-sm text-gray-500">Peso: {product.weight}</p>
         )}
         {estimate && !blocked && (
           <div className="border rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Product</span>
+              <span className="text-gray-600">Producto</span>
               <span>{formatCents(estimate.productCents)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Amazon shipping</span>
-              <span>{estimate.shippingCents === 0 ? "Free" : formatCents(estimate.shippingCents)}</span>
+              <span className="text-gray-600">Envio Amazon</span>
+              <span>{estimate.shippingCents === 0 ? "Gratis" : formatCents(estimate.shippingCents)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Tax (FL 7%)</span>
+              <span className="text-gray-600">Impuesto (FL 7%)</span>
               <span>{formatCents(estimate.taxCents ?? 0)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">
-                Shipping to Venezuela
+                Envio a Venezuela
                 {estimate.owcWeightLbs ? ` (${estimate.owcWeightLbs} lb${estimate.owcVolumetric ? ", vol." : ""})` : ""}
               </span>
               <span>{formatCents(estimate.owcShippingCents ?? 0)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Service fee</span>
+              <span className="text-gray-600">Comision</span>
               <span>{formatCents(estimate.zincFeeCents)}</span>
             </div>
             <div className="flex justify-between border-t pt-2 font-bold text-base">
@@ -128,15 +128,15 @@ export function ProductCard({
         )}
         {blocked ? (
           <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
-            {blockedReason ?? "This product cannot be shipped to Venezuela."}
+            {blockedReason ?? "Este producto no se puede enviar a Venezuela."}
           </p>
         ) : product.price <= 0 ? (
           <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
-            Price unavailable for this product. This may be a grocery, subscription, or region-restricted item. Try a different product.
+            Precio no disponible. Puede ser un producto por suscripcion o restringido por region. Intenta con otro producto.
           </p>
         ) : estimateError ? (
           <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
-            Unable to estimate shipping cost — product weight is missing or unrecognized. This product cannot be purchased at this time.
+            No se pudo estimar el costo de envio — el peso del producto no esta disponible. Este producto no se puede comprar en este momento.
           </p>
         ) : authLoading ? null : !user ? (
           <a
@@ -159,7 +159,7 @@ export function ProductCard({
                 disabled={payLoading}
                 className="w-full py-2 border border-gray-300 text-gray-500 text-sm rounded-lg hover:bg-gray-100 disabled:opacity-50"
               >
-                Skip Payment (Dev)
+                Saltar Pago (Dev)
               </button>
             )}
           </>

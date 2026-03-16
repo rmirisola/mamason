@@ -17,7 +17,7 @@ export function UrlInput({
         e.preventDefault();
         if (url.trim() && !loading) onSubmit(url.trim());
       }}
-      className="w-full max-w-xl flex gap-2"
+      className="w-full max-w-xl flex flex-col sm:flex-row gap-2"
     >
       <input
         type="text"

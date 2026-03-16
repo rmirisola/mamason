@@ -6,18 +6,18 @@ export function Navbar() {
   const { user, isLoading } = useUser();
 
   return (
-    <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
-      <a href="/" className="flex items-center gap-2">
-        <img src="/logo-icon.png" alt="" className="h-9 object-contain" />
-        <span className="text-2xl font-bold text-navy">Lopido</span>
+    <header className="bg-white border-b px-4 sm:px-6 py-3 flex items-center justify-between">
+      <a href="/" className="flex items-center gap-2 shrink-0">
+        <img src="/logo-icon.png" alt="" className="h-8 sm:h-9 object-contain" />
+        <span className="text-xl sm:text-2xl font-bold text-navy">Lopido</span>
       </a>
-      <nav className="flex items-center gap-4 text-sm">
+      <nav className="flex items-center gap-2 sm:gap-4 text-sm">
         {isLoading ? null : user ? (
           <>
             <a href="/orders" className="text-gray-600 hover:text-gray-900">
               Mis Pedidos
             </a>
-            <span className="text-gray-500">{user.email}</span>
+            <span className="text-gray-500 hidden sm:inline">{user.email}</span>
             <a
               href="/auth/logout"
               className="px-3 py-1 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100"

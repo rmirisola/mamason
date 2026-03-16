@@ -8,7 +8,7 @@ export function Navbar() {
   return (
     <header className="bg-white border-b px-4 sm:px-6 py-3 flex items-center justify-between">
       <a href="/" className="flex items-center gap-2 shrink-0">
-        <img src="/logo-icon.png" alt="" className="h-8 sm:h-9 object-contain" />
+        <img src="/logo-icon.png" alt="" className="h-9 sm:h-10 object-contain" />
         <span className="text-xl sm:text-2xl font-bold text-navy">Lopido</span>
       </a>
       <nav className="flex items-center gap-2 sm:gap-4 text-sm">

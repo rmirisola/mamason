@@ -2,7 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { PaymentQR } from "@/components/payment-qr";
+import { useUser } from "@auth0/nextjs-auth0/client";
 
 type CheckoutData = {
   id: string;
@@ -20,6 +20,7 @@ type CheckoutData = {
 export default function PayPage() {
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
+  const { user } = useUser();
   const [checkout, setCheckout] = useState<CheckoutData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -27,10 +28,11 @@ export default function PayPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     fetch("/api/admin/orders").then((res) => {
       if (res.ok) setIsAdmin(true);
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     async function fetchCheckout() {

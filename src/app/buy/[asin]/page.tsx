@@ -2,6 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { ProductCard } from "@/components/product-card";
 import { UrlInput } from "@/components/url-input";
 import { PendingCheckoutBanner } from "@/components/pending-checkout-banner";
@@ -10,6 +11,7 @@ import { Product } from "@/lib/types";
 export default function BuyPage() {
   const router = useRouter();
   const { asin } = useParams<{ asin: string }>();
+  const { user } = useUser();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -17,10 +19,11 @@ export default function BuyPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     fetch("/api/admin/orders").then((res) => {
       if (res.ok) setIsAdmin(true);
     }).catch(() => {});
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     async function fetchProduct() {

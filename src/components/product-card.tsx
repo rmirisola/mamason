@@ -83,7 +83,14 @@ export function ProductCard({
           <span className="text-3xl font-bold text-gray-900">
             {blocked ? "N/D" : product.price > 0 ? `$${product.price.toFixed(2)}` : "N/D"}
           </span>
-          <span className="text-sm text-gray-500">en Amazon</span>
+          <a
+            href={`https://www.amazon.com/dp/${product.asin}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-navy/50 hover:text-navy underline"
+          >
+            Ver en Amazon
+          </a>
         </div>
         {product.weight && (
           <p className="text-sm text-gray-500">Peso: {product.weight}</p>

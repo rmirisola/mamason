@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import Link from "next/link";
 
 type PendingSession = {
@@ -13,9 +14,11 @@ type PendingSession = {
 };
 
 export function PendingCheckoutBanner() {
+  const { user } = useUser();
   const [sessions, setSessions] = useState<PendingSession[]>([]);
 
   useEffect(() => {
+    if (!user) return;
     async function fetchPending() {
       try {
         const res = await fetch("/api/checkout/pending");
@@ -27,7 +30,7 @@ export function PendingCheckoutBanner() {
       }
     }
     fetchPending();
-  }, []);
+  }, [user]);
 
   if (sessions.length === 0) return null;
 

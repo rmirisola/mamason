@@ -53,7 +53,7 @@ export function UrlInput({
           disabled={!isAmazonUrl || loading}
           className="px-8 py-3.5 sm:py-3 bg-navy text-white font-bold rounded-lg hover:bg-navy-light disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transition-colors whitespace-nowrap shadow-sm hover:shadow-md text-base"
         >
-          {loading ? "Buscando..." : "Buscar Producto"}
+          {loading ? "Buscando..." : "Obtener Precio"}
         </button>
       </div>
     </form>

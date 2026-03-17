@@ -107,24 +107,43 @@ export default function PayPage() {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      {checkout.checkoutUrl && checkout.qrContent && (
-        <PaymentQR
-          qrContent={checkout.qrContent}
-          checkoutUrl={checkout.checkoutUrl}
-          amount={checkout.productPrice}
-          isMock={checkout.qrContent.startsWith("mock-")}
-          isAdmin={isAdmin}
-          onMockPay={async () => {
-            const res = await fetch(`/api/checkout/${sessionId}/mock-pay`, {
-              method: "POST",
-            });
-            if (!res.ok) {
-              const data = await res.json();
-              setError(data.error || "Mock payment failed");
-            }
-            // Polling will pick up the status change and redirect
-          }}
-        />
+      {checkout.checkoutUrl && (
+        <div className="flex flex-col items-center gap-6 p-8 bg-white rounded-lg shadow-lg max-w-sm">
+          <h2 className="text-xl font-bold text-gray-900">Pagar</h2>
+          <p className="text-3xl font-bold text-gray-900">
+            ${checkout.productPrice.toFixed(2)} <span className="text-sm text-gray-500">USD</span>
+          </p>
+          <p className="text-sm text-gray-500 text-center">
+            {checkout.productTitle}
+          </p>
+          {checkout.qrContent?.startsWith("mock-") && isAdmin ? (
+            <button
+              onClick={async () => {
+                const res = await fetch(`/api/checkout/${sessionId}/mock-pay`, {
+                  method: "POST",
+                });
+                if (!res.ok) {
+                  const data = await res.json();
+                  setError(data.error || "Mock payment failed");
+                }
+              }}
+              className="w-full py-3 bg-gray-200 text-gray-700 font-bold rounded-lg hover:bg-gray-300"
+            >
+              Simular Pago (Admin)
+            </button>
+          ) : (
+            <a
+              href={checkout.checkoutUrl}
+              className="w-full py-3 bg-navy text-white font-bold rounded-lg hover:bg-navy-light text-center block shadow-sm"
+            >
+              Pagar con Stripe
+            </a>
+          )}
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-navy rounded-full" />
+            Esperando pago...
+          </div>
+        </div>
       )}
       {timeLeft !== null && (
         <p className="text-sm text-gray-500">

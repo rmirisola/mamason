@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createPaymentOrder } from "@/lib/binance";
+import { createCheckoutSession } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/user";
 
@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
 
     const providerRef = crypto.randomUUID().replace(/-/g, "").slice(0, 32);
 
-    // Create session first so we have the ID for mock URLs
     const session = await prisma.checkoutSession.create({
       data: {
         userId: user.id,
@@ -47,21 +46,25 @@ export async function POST(request: NextRequest) {
         productPrice: price,
         productImage: image ?? null,
         productWeight: weight ?? null,
-        paymentProvider: "BINANCE",
+        paymentProvider: "STRIPE",
         providerRef,
         expiresAt: new Date(Date.now() + CHECKOUT_TTL_MS),
       },
     });
 
-    // Create payment order (mock URL uses sessionId)
-    const payment = await createPaymentOrder(providerRef, price, title, session.id);
+    // Create Stripe Checkout Session
+    const { checkoutUrl, stripeSessionId } = await createCheckoutSession({
+      sessionId: session.id,
+      amount: price,
+      productTitle: title,
+      customerEmail: user.email,
+    });
 
-    // Update session with payment URLs
     await prisma.checkoutSession.update({
       where: { id: session.id },
       data: {
-        checkoutUrl: payment.checkoutUrl,
-        qrContent: payment.qrContent,
+        checkoutUrl,
+        qrContent: stripeSessionId,
       },
     });
 

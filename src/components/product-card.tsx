@@ -147,12 +147,22 @@ export function ProductCard({
           </a>
         ) : estimate ? (
           <>
-            <button
-              disabled
-              className="w-full py-3 bg-gray-300 text-gray-500 font-bold rounded-lg cursor-not-allowed"
-            >
-              Proximamente
-            </button>
+            {onSkipPayment ? (
+              <button
+                onClick={() => onPay(estimate.totalCents)}
+                disabled={payLoading}
+                className="w-full py-3 bg-navy text-white font-bold rounded-lg hover:bg-navy-light disabled:opacity-50"
+              >
+                {payLoading ? "Procesando..." : `Pagar ${formatCents(estimate.totalCents)}`}
+              </button>
+            ) : (
+              <button
+                disabled
+                className="w-full py-3 bg-gray-300 text-gray-500 font-bold rounded-lg cursor-not-allowed"
+              >
+                Proximamente
+              </button>
+            )}
             {onSkipPayment && (
               <button
                 onClick={() => onSkipPayment(estimate.totalCents)}

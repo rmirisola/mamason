@@ -22,7 +22,8 @@ Customer → Mamazon → Zinc API → Amazon
 |---------|---------|------|-----------|
 | Rainforest API | Product data (price, weight, categories, images) | API key in query param | `RAINFOREST_MOCK=true` |
 | Zinc API (bizapi) | Automated Amazon purchasing via ZMA Prime | Basic auth (base64) | `ZINC_MOCK=true` |
-| Binance Pay | USDT payments | HMAC-SHA512 signed requests | `BINANCE_MOCK=true` |
+| Stripe | Payments (card + USDC) | Secret key + webhook signature | Test keys in dev |
+| Binance Pay (legacy) | USDT payments | HMAC-SHA512 signed requests | `BINANCE_MOCK=true` |
 | One Way Cargo | FL → Venezuela shipping | N/A (rate calculation only) | N/A |
 | Auth0 | User authentication | OAuth2/OIDC via SDK | Required |
 | BCV (pydolarve.org) | Bolivar exchange rate for OWC pricing | None | Fallback to hardcoded rate |
@@ -81,10 +82,11 @@ Order
 The checkout is a two-model pipeline: `CheckoutSession` → `Order`.
 
 1. User views product on `/buy/[asin]` — price estimate fetched automatically
-2. User clicks "Pay $X with Binance" — `POST /api/checkout/create` creates a `CheckoutSession` (pending, 30min TTL)
-3. User sees QR code on `/pay/[sessionId]` — polls for payment status
-4. Payment confirmed (webhook or mock) → `handlePaymentConfirmed()` atomically creates an `Order` and marks session `paid`
-5. Zinc order placed automatically after payment — if it fails, order stays at `created` for admin retry
+2. User clicks "Pagar $X" — `POST /api/checkout/create` creates a `CheckoutSession` + Stripe Checkout Session
+3. User redirected to `/pay/[sessionId]` → clicks "Pagar con Stripe" → redirected to Stripe hosted checkout
+4. Payment on Stripe (card or USDC) → Stripe redirects to `/api/checkout/[sessionId]/success` + sends webhook to `/api/stripe/webhook`
+5. `handlePaymentConfirmed()` atomically creates an `Order` and marks session `paid`
+6. Zinc order placed automatically after payment — if it fails, order stays at `created` for admin retry
 
 ### Checkout Recovery
 
@@ -281,7 +283,9 @@ Auth0 (Regular Web App) with `@auth0/nextjs-auth0` v4.
 | `/api/checkout/[sessionId]` | GET | Public | Checkout session status |
 | `/api/checkout/[sessionId]/cancel` | POST | Logged in | Cancel a pending session |
 | `/api/checkout/[sessionId]/mock-pay` | POST | Dev | Simulate payment confirmation |
-| `/api/payment/webhook` | POST | Binance | Payment confirmation webhook |
+| `/api/stripe/webhook` | POST | Stripe | Stripe payment webhook |
+| `/api/checkout/[sessionId]/success` | GET | Public | Stripe success redirect → verifies payment → redirects to order |
+| `/api/payment/webhook` | POST | Binance | Payment confirmation webhook (legacy) |
 | `/api/order/[orderId]` | GET | Public | Order status (polls Zinc) |
 | `/api/dev/order` | POST | Logged in | Skip payment (dev only) |
 | `/api/admin/orders` | GET | Admin | List all orders |
@@ -411,8 +415,10 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 # API Keys
 RAINFOREST_API_KEY=
 ZINC_API_KEY=
-BINANCE_API_KEY=
-BINANCE_SECRET_KEY=
+STRIPE_SECRET_KEY=       # sk_test_... or sk_live_...
+STRIPE_WEBHOOK_SECRET=   # whsec_...
+BINANCE_API_KEY=         # legacy
+BINANCE_SECRET_KEY=      # legacy
 
 # Admin
 ADMIN_EMAILS=              # comma-separated

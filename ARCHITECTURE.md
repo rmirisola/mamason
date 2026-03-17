@@ -72,9 +72,17 @@ Order
 ├── paidAt
 ├── zincOrderId
 ├── status: OrderStatus enum (see state machine)
+├── webhookLogs[] → WebhookLog
 ├── checkoutSession → CheckoutSession
 ├── createdAt
 └── updatedAt
+
+WebhookLog
+├── id (cuid)
+├── source              # "zinc" | "stripe"
+├── orderId → Order (optional)
+├── payload (JSON)      # full webhook payload
+└── createdAt
 ```
 
 ## Checkout Flow
@@ -172,19 +180,23 @@ If the user navigates away from `/pay/[sessionId]`:
 | `created` | Zinc order placed | `fulfillment_pending` | `handlePaymentConfirmed()` |
 | `created` | Zinc creation fails | `fulfillment_failed` | `handlePaymentConfirmed()` |
 | `fulfillment_failed` | Admin retry | `fulfillment_pending` | `POST /api/admin/orders/retry` |
-| `fulfillment_pending` | Zinc polling | `ordering_from_amazon` | `GET /api/order/[orderId]` |
-| `ordering_from_amazon` | Zinc polling | `ordered_on_amazon` | `GET /api/order/[orderId]` |
-| `ordered_on_amazon` | Zinc polling | `shipped_to_warehouse` | `GET /api/order/[orderId]` |
-| `shipped_to_warehouse` | Zinc polling | `received_at_warehouse` | `GET /api/order/[orderId]` |
+| `fulfillment_pending` | Zinc webhook/polling | `ordering_from_amazon` | `POST /api/zinc/webhook` or `GET /api/order/[orderId]` |
+| `ordering_from_amazon` | Zinc webhook/polling | `ordered_on_amazon` | `POST /api/zinc/webhook` or `GET /api/order/[orderId]` |
+| `ordered_on_amazon` | Zinc webhook/polling | `shipped_to_warehouse` | `POST /api/zinc/webhook` or `GET /api/order/[orderId]` |
+| `shipped_to_warehouse` | Zinc webhook/polling | `received_at_warehouse` | `POST /api/zinc/webhook` or `GET /api/order/[orderId]` |
 | `received_at_warehouse` | Admin | `shipped_to_venezuela` | `POST /api/admin/orders/status` |
 | `shipped_to_venezuela` | Admin | `in_transit_venezuela` | `POST /api/admin/orders/status` |
 | `in_transit_venezuela` | Admin | `delivered` | `POST /api/admin/orders/status` |
 
 ### Zinc Status Updates
 
-**Current (Alpha):** Status is updated by polling Zinc on every order view (`GET /api/order/[orderId]` and `GET /api/admin/orders/[orderId]`). This works for low volume but won't scale — every page load hits the Zinc API.
+**Primary: Zinc webhooks.** Orders are created with `webhooks.status_updated` pointing to `/api/zinc/webhook`. Zinc POSTs the full order response on every status change. The webhook handler updates the order status in the DB and will trigger email notifications.
 
-**Future (Beta):** Replace polling with Zinc webhooks. Zinc can POST status updates to a callback URL, which would update the order in our DB immediately. Polling can then be removed or kept as a fallback for missed webhooks.
+**Fallback: Polling.** The order detail pages (`GET /api/order/[orderId]` and `GET /api/admin/orders/[orderId]`) still poll Zinc on view. This catches any missed webhooks.
+
+### Webhook Logging
+
+All webhook payloads (Zinc and Stripe) are stored in the `WebhookLog` table with source, orderId, and full JSON payload. This provides an audit trail and helps debug integration issues.
 
 ### Payment Idempotency
 
@@ -287,7 +299,9 @@ Auth0 (Regular Web App) with `@auth0/nextjs-auth0` v4.
 | `/api/checkout/[sessionId]/success` | GET | Public | Stripe success redirect → verifies payment → redirects to order |
 | `/api/payment/webhook` | POST | Binance | Payment confirmation webhook (legacy) |
 | `/api/order/[orderId]` | GET | Public | Order status (polls Zinc) |
-| `/api/dev/order` | POST | Logged in | Skip payment (dev only) |
+| `/api/zinc/webhook` | POST | Public | Zinc order status webhook |
+| `/api/dev/order` | POST | Admin | Skip payment (dev only) |
+| `/api/dev/simulate-zinc-webhook` | POST | Admin | Simulate Zinc webhook for testing |
 | `/api/admin/orders` | GET | Admin | List all orders |
 | `/api/admin/orders/[orderId]` | GET | Admin | Order details + Zinc + OWC |
 | `/api/admin/orders/retry` | POST | Admin | Retry failed Zinc order |

@@ -58,7 +58,7 @@ Most competitors use manual purchasing. None offer crypto payments. Aeropost is 
 4. **Order placement via Zinc API** — Automated Amazon purchasing to Weston FL warehouse, 10% max_price buffer
 5. **Order tracking** — Full state machine: created → fulfillment → ordering → ordered → shipped → warehouse → VE transit → delivered
 6. **User accounts** — Auth0 login, order history, checkout session recovery
-7. **Product restrictions** — OWC/Amazon prohibited item checks (hazmat, weapons, lithium, etc.) with blocked/flagged states
+7. **Product restrictions** — Only Prime-eligible products allowed (non-Prime and no-buybox blocked)
 8. **OWC shipping estimation** — Weight-based and volumetric pricing using BCV exchange rate
 9. **Checkout recovery** — Pending checkout banners, session dedup per ASIN, cancel from pay page
 10. **Admin dashboard** — Order list, status updates, Zinc retry for failed fulfillment

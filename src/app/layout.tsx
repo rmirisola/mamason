@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Lopido — Lo pido, te llega",
   description: "Compra lo que quieras en Amazon y te lo llevamos a tu puerta en Venezuela. Paga con USDC o tarjeta.",
-  icons: { icon: "/favicon.ico" },
+  icons: { icon: "/favicon.ico", apple: "/apple-touch-icon.png" },
 };
 
 export default function RootLayout({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { handlePaymentConfirmed } from "@/lib/payment";
 import { prisma } from "@/lib/db";
 
@@ -17,7 +17,7 @@ export async function GET(
 
   try {
     // Verify the Stripe session is actually paid
-    const stripeSession = await stripe.checkout.sessions.retrieve(stripeSessionId);
+    const stripeSession = await getStripe().checkout.sessions.retrieve(stripeSessionId);
 
     if (
       stripeSession.payment_status === "paid" &&

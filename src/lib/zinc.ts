@@ -33,6 +33,9 @@ export async function createZincOrder(
       is_gift: false,
       addax: true,
       zma_flags: ["bizapi", "bizapi-only"],
+      webhooks: {
+        status_updated: `${process.env.APP_BASE_URL}/api/zinc/webhook`,
+      },
       client_notes: {
         mamazon_order_id: mamazonOrderId,
       },

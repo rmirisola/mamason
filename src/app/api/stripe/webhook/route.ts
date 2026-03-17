@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { handlePaymentConfirmed } from "@/lib/payment";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -18,11 +19,19 @@ export async function POST(request: NextRequest) {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripe().webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     console.error("Stripe webhook signature verification failed:", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
+
+  // Log every webhook payload
+  await prisma.webhookLog.create({
+    data: {
+      source: "stripe",
+      payload: JSON.parse(JSON.stringify({ type: event.type, data: event.data.object })),
+    },
+  });
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;

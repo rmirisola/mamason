@@ -85,6 +85,20 @@ model Order {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
+  webhookLogs     WebhookLog[]
+
   @@index([userId])
   @@index([status])
+}
+
+model WebhookLog {
+  id        String   @id @default(cuid())
+  source    String   // "zinc", "stripe", etc.
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([source, createdAt])
 }

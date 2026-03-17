@@ -17,7 +17,7 @@ type Order = {
 type ZincDetails = {
   id: string;
   status: string;
-  trackingNumbers?: string[];
+  trackingNumbers?: unknown[];
   priceComponents?: {
     product_subtotal?: number;
     shipping?: number;
@@ -339,9 +339,15 @@ function OrderDetails({
         {zinc.trackingNumbers && zinc.trackingNumbers.length > 0 && (
           <div className="mt-2">
             <p className="text-gray-500">Tracking:</p>
-            {zinc.trackingNumbers.map((t) => (
-              <p key={t} className="font-mono text-xs">{t}</p>
-            ))}
+            {zinc.trackingNumbers.map((t: unknown, i: number) => {
+              const tracking = typeof t === "string" ? t : (t as Record<string, unknown>)?.tracking_number ?? JSON.stringify(t);
+              const carrier = typeof t === "object" && t !== null ? (t as Record<string, unknown>)?.carrier : undefined;
+              return (
+                <p key={i} className="font-mono text-xs">
+                  {carrier ? `${carrier}: ` : ""}{String(tracking)}
+                </p>
+              );
+            })}
           </div>
         )}
       </div>

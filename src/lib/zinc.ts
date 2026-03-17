@@ -97,7 +97,9 @@ export async function getZincOrder(orderId: string): Promise<ZincOrder> {
   return {
     id: data.request_id,
     status,
-    trackingNumbers: data.tracking ?? [],
+    trackingNumbers: (data.tracking ?? []).map((t: Record<string, unknown>) =>
+      typeof t === "string" ? t : (t.tracking_number as string) ?? ""
+    ).filter(Boolean),
     priceComponents,
     errorCode: isRealError ? data.code : undefined,
     errorMessage: isRealError ? data.message : undefined,
@@ -105,7 +107,9 @@ export async function getZincOrder(orderId: string): Promise<ZincOrder> {
     maxPrice: data.request?.max_price ?? undefined,
     clientNotes: data.request?.client_notes ?? undefined,
     merchantOrderId: data.merchant_order_ids?.[0]?.merchant_order_id ?? undefined,
-    trackingUrl: data.merchant_order_ids?.[0]?.tracking_url ?? undefined,
+    trackingUrl: (data.tracking ?? []).map((t: Record<string, unknown>) =>
+      typeof t === "string" ? undefined : (t.tracking_url as string)
+    ).find((u: string | undefined) => u) ?? data.merchant_order_ids?.[0]?.tracking_url ?? undefined,
     deliveryDate: data.delivery_dates?.[0]?.date ?? undefined,
   };
 }
